@@ -14,6 +14,7 @@ import (
 	"moul.io/http2curl"
 )
 
+// JSONData represents the standard response structure for JSON services.
 type JSONData struct {
 	Data       any       `json:"data"`
 	TotalPages *uint     `json:"total_pages,omitempty"`
@@ -23,6 +24,7 @@ type JSONData struct {
 	Errors     []*string `json:"errors,omitempty"`
 }
 
+// ResponseWithPagination creates a JSONData structure with calculated pagination metadata.
 func ResponseWithPagination(data interface{}, count int64, pageSize uint, pageNumber uint) *JSONData {
 	totalPage := uint(int64(count) / int64(pageSize))
 	if uint(int64(count)%int64(pageSize)) != 0 {
@@ -39,7 +41,7 @@ func ResponseWithPagination(data interface{}, count int64, pageSize uint, pageNu
 	}
 }
 
-// HttpUtil estructura principal para realizar solicitudes HTTP
+// HttpUtil is the primary structure for making HTTP requests with integrated logging and retries.
 type HttpUtil struct {
 	logger         *zap.SugaredLogger
 	client         *http.Client
@@ -60,9 +62,9 @@ type ResponseData struct {
 	StatusCode int
 }
 
-// New crea una nueva instancia de HttpUtil con valores por defecto
+// New creates a new HttpUtil instance with default configuration.
 func New(ctx context.Context) HttpUtil {
-	// Crea un nuevo logger con la configuración base del proyecto
+	// Creates a new logger with the project's base configuration.
 	zLog := logger.NewLoggerWithLevel("")
 
 	client := http.Client{}
@@ -79,28 +81,28 @@ func New(ctx context.Context) HttpUtil {
 	}
 }
 
-// SetLevel establece el nivel de log para esta instancia de HttpUtil creando un nuevo logger.
+// SetLevel sets the log level for this HttpUtil instance.
 func (l *HttpUtil) SetLevel(level string) {
 	if level == "" {
 		return
 	}
 
-	// Obtenemos una nueva instancia de logger con el nivel deseado, manteniendo la config del proyecto.
+	// Obtains a new logger instance with the desired level, maintaining the project's configuration.
 	newLog := logger.NewLoggerWithLevel(level)
 	l.logger = newLog.Sugar()
 }
 
-// SetCallRetry establece el número de reintentos para las solicitudes
+// SetCallRetry sets the number of retry attempts for failed requests.
 func (l *HttpUtil) SetCallRetry(callRetry int) {
 	l.callRetry = callRetry
 }
 
-// SetHeader establece las cabeceras de la solicitud
+// SetHeader sets the request headers.
 func (l *HttpUtil) SetHeader(header http.Header) {
 	l.header = &header
 }
 
-// AddHeader añade cabeceras a la solicitud
+// AddHeader appends headers to the existing request headers.
 func (l *HttpUtil) AddHeader(header http.Header) {
 	if l.header == nil {
 		l.header = &http.Header{}
@@ -117,35 +119,35 @@ func (l *HttpUtil) SetClient(client *http.Client) {
 	l.client = client
 }
 
-// SetPrintCurl habilita o deshabilita la impresión de las solicitudes en formato curl
+// SetPrintCurl enables or disables printing requests in CURL format to the log.
 func (l *HttpUtil) SetPrintCurl(arg bool) {
 	l.printCurl = arg
 }
 
-// SetBasicAuthenticacion establece la autenticación básica
+// SetBasicAuthenticacion sets the basic authentication credentials for the HTTP client.
 func (l *HttpUtil) SetBasicAuthenticacion(user, pass string) {
 	l.authentication = &authenticacionRest{User: user, Pass: pass}
 }
 
-// GetRest realiza una solicitud GET
+// GetRest performs an HTTP GET request.
 func (l *HttpUtil) GetRest(url string, timeout time.Duration) (ResponseData, error) {
 	l.logger.Debug("-----------------GetRest--------------------------")
 	return l.rest(url, http.MethodGet, nil, timeout)
 }
 
-// PostRest realiza una solicitud POST
+// PostRest performs an HTTP POST request with a JSON body.
 func (l *HttpUtil) PostRest(url string, body interface{}, timeout time.Duration) (ResponseData, error) {
 	l.logger.Debug("-----------------PostRest--------------------------")
 	return l.rest(url, http.MethodPost, body, timeout)
 }
 
-// PutRest realiza una solicitud PUT
+// PutRest performs an HTTP PUT request.
 func (l *HttpUtil) PutRest(url string, body interface{}, timeout time.Duration) (ResponseData, error) {
 	l.logger.Debug("-----------------PutRest--------------------------")
 	return l.rest(url, http.MethodPut, body, timeout)
 }
 
-// PatchRest realiza una solicitud PATCH
+// PatchRest performs an HTTP PATCH request.
 func (l *HttpUtil) PatchRest(url string, body interface{}, timeout time.Duration) (ResponseData, error) {
 	l.logger.Debug("-----------------PatchRest--------------------------")
 	return l.rest(url, http.MethodPatch, body, timeout)

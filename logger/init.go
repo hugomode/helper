@@ -25,11 +25,11 @@ func getBaseConfig() zap.Config {
 	return cfg
 }
 
-// InitLogger initializes the global logger
+// InitLogger initializes the global logger based on environment configuration.
 func InitLogger() {
 	cfg := getBaseConfig()
 
-	// 👇 fuerza el umbral del stacktrace a Error (no en Warn)
+	// 👇 force stacktrace threshold to Error (not Warn)
 	var err error
 	Log, err = cfg.Build(zap.AddStacktrace(zapcore.ErrorLevel))
 	if err != nil {
@@ -39,7 +39,7 @@ func InitLogger() {
 	defer Log.Sync()
 }
 
-// NewLoggerWithLevel creates a new logger instance with the project's base configuration and a specific level
+// NewLoggerWithLevel creates a new logger instance with the project's base configuration and a specific level.
 func NewLoggerWithLevel(level string) *zap.Logger {
 	cfg := getBaseConfig()
 

@@ -20,6 +20,8 @@ var (
 	dbOncePostgres sync.Once
 )
 
+// GetDBPostgres initializes and returns a singleton instance of the GORM Postgres database connection.
+// It configures connection pooling based on environment variables.
 func GetDBPostgres() (*gorm.DB, error) {
 	var err error
 	host := os.Getenv("DB_POSTGRES_HOST")
@@ -74,6 +76,7 @@ func GetDBPostgres() (*gorm.DB, error) {
 	return dbPostgres, err
 }
 
+// HealthcheckPostgresHandler performs a ping to the Postgres database to verify connectivity.
 func HealthheckPostgresHandler() error {
 	sqlDB, err := dbPostgres.DB()
 	if err != nil {
@@ -87,6 +90,8 @@ func HealthheckPostgresHandler() error {
 	return nil
 }
 
+// LikesQuery builds a GORM query with OR conditions using the LIKE operator for the specified slice of elements.
+// It supports string and int types, applying lower() to strings and casting ints to varchar.
 func LikesQuery[T *int | *string | *bool](slice []T, nameColumn string) *gorm.DB {
 	query := dbPostgres
 	for _, element := range slice {
@@ -104,6 +109,7 @@ func LikesQuery[T *int | *string | *bool](slice []T, nameColumn string) *gorm.DB
 	return query
 }
 
+// BetweenDates filters a query based on a date range (start and end times) for a given column.
 func BetweenDates(query *gorm.DB, desde, hasta *time.Time, nameColumn string) *gorm.DB {
 	if desde != nil && hasta != nil {
 		query.Where(fmt.Sprintf("%s BETWEEN ? AND ?", nameColumn), desde, hasta)

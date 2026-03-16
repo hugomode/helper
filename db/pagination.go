@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// GetDataQueryPagination aplica paginación estándar de GORM (LIMIT y OFFSET) a una consulta.
+// GetDataQueryPagination applies standard GORM pagination (LIMIT and OFFSET) to a query.
 func GetDataQueryPagination(pageSize, pageNumber uint, dest interface{}, tx *gorm.DB) error {
 	if pageSize == 0 {
 		return errors.New("pageSize must be greater than 0")
@@ -24,7 +24,7 @@ func GetDataQueryPagination(pageSize, pageNumber uint, dest interface{}, tx *gor
 	return RunOneQuery(dest, query)
 }
 
-// RunOneQuery ejecuta una consulta GORM y maneja el error de registro no encontrado.
+// RunOneQuery executes a GORM query and handles the record not found error.
 func RunOneQuery(dest interface{}, tx *gorm.DB) error {
 	err := tx.Find(dest).Error
 	if err != nil {
@@ -37,7 +37,8 @@ func RunOneQuery(dest interface{}, tx *gorm.DB) error {
 	return nil
 }
 
-// RunQueriesInParallel ejecuta dos funciones de consulta en paralelo (usualmente datos y conteo).
+// RunQueriesInParallel executes two query functions in parallel (typically data and count) using goroutines.
+// It supports context cancellation and collects the first error encountered.
 func RunQueriesInParallel(
 	ctx context.Context,
 	queryDataFunc func() error,
