@@ -30,7 +30,8 @@ func InitLogger() {
 	cfg := getBaseConfig()
 
 	// 👇 fuerza el umbral del stacktrace a Error (no en Warn)
-	Log, err := cfg.Build(zap.AddStacktrace(zapcore.ErrorLevel))
+	var err error
+	Log, err = cfg.Build(zap.AddStacktrace(zapcore.ErrorLevel))
 	if err != nil {
 		panic(err)
 	}

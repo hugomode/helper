@@ -8,6 +8,7 @@ Este proyecto es una colección de utilitarios en Go para simplificar tareas com
 - [Base de Datos (Postgres)](#base-de-datos-postgres)
 - [Paginación y Consultas Paralelas](#paginación-y-consultas-paralelas)
 - [HTTP Util](#http-util)
+- [Pruebas (Testing)](#pruebas-testing)
 
 ---
 
@@ -135,3 +136,18 @@ type JSONData struct {
     Errors     []*string `json:"errors,omitempty"`
 }
 ```
+
+---
+
+## Pruebas (Testing)
+
+El proyecto incluye tests unitarios para los paquetes `logger`, `db` y `http`. Para ejecutar las pruebas, asegúrate de haber instalado las dependencias (especialmente `testify`) y corre el siguiente comando desde la raíz del proyecto:
+
+```bash
+go test -v ./...
+```
+
+Estas pruebas verifican:
+- Inicialización y niveles del logger.
+- Lógica de paginación y ejecución paralela segura.
+- Configuración de cabeceras y peticiones HTTP (usando `httptest`).
