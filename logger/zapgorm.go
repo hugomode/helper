@@ -20,7 +20,7 @@ func NewZapGormLogger(zapLogger *zap.Logger) *ZapGormLogger {
 }
 
 func (l *ZapGormLogger) LogMode(level logger.LogLevel) logger.Interface {
-	return l // For simplicity, returning the same instance
+	return l // For simplicity, return the same instance
 }
 
 func (l *ZapGormLogger) Info(ctx context.Context, msg string, data ...interface{}) {
@@ -41,7 +41,7 @@ func (l *ZapGormLogger) Trace(ctx context.Context, begin time.Time, fc func() (s
 	switch {
 	case err != nil:
 		l.logger.Sugar().Errorf("SQL Trace (ERROR): \n%s -> rows: %d elapsed: %s error: %v", sql, rows, elapsed, err)
-	case elapsed > 500*time.Millisecond: // Si tarda más de 500ms, marcar como advertencia
+	case elapsed > 500*time.Millisecond: // If it takes more than 500ms, mark as warning
 		l.logger.Sugar().Warnw(fmt.Sprintf("SQL Trace (SLOW QUERY): \n%s -> rows: %d elapsed: %s", sql, rows, elapsed))
 	default:
 		l.logger.Sugar().Infof("SQL Trace: \n%s -> rows: %d elapsed: %s", sql, rows, elapsed)

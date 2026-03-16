@@ -43,11 +43,11 @@ func GetDBPostgres() (*gorm.DB, error) {
 			Logger:      newLogger,
 		})
 		if err != nil {
-			panic("Error al conectarse a la base de datos: " + err.Error())
+			panic("Error connecting to the database: " + err.Error())
 		}
 		debe, err := dbPostgres.DB()
 		if err != nil {
-			panic("Error al obtener al intentar configurar pool de conexiones: " + err.Error())
+			panic("Error obtaining/configuring connection pool: " + err.Error())
 		}
 		maxOpenConn := os.Getenv("DB_POSTGRES_MAX_OPEN_CONNECTIONS")
 		maxIdleConn := os.Getenv("DB_POSTGRES_MAX_IDLE_CONNECTIONS")
