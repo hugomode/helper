@@ -125,6 +125,7 @@ Reglas relevantes:
 ### Consultas en paralelo
 
 `RunQueriesInParallel` sirve para ejecutar en paralelo la consulta de datos y la consulta de conteo.
+Para el conteo, usa `GetCountQuery` para clonar la query base y limpiar `ORDER`, `LIMIT` y `OFFSET`.
 
 ```go
 package service
@@ -149,7 +150,7 @@ func GetUsersPage(ctx context.Context, tx *gorm.DB, pageSize, pageNumber uint) (
 			return db.GetDataQueryPagination(pageSize, pageNumber, &users, baseQuery.Order("id desc"))
 		},
 		func() error {
-			return baseQuery.Count(&total).Error
+			return db.GetCountQuery(baseQuery).Count(&total).Error
 		},
 	)
 	if err != nil {

@@ -25,6 +25,12 @@ func GetDataQueryPagination(pageSize, pageNumber uint, dest any, tx *gorm.DB) er
 	return RunOneQuery(dest, query)
 }
 
+// GetCountQuery clones a query for count operations and removes clauses that should
+// not affect the total number of records.
+func GetCountQuery(tx *gorm.DB) *gorm.DB {
+	return tx.Session(&gorm.Session{}).Offset(-1).Limit(-1).Order("")
+}
+
 // RunOneQuery executes a GORM query and handles the record not found error.
 func RunOneQuery(dest any, tx *gorm.DB) error {
 	err := tx.Find(dest).Error
