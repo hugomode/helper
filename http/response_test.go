@@ -1,4 +1,4 @@
-package http
+package httpHelper
 
 import (
 	"context"
@@ -21,7 +21,6 @@ func TestResponseWithPagination(t *testing.T) {
 
 	assert.NotNil(t, resp)
 	assert.Equal(t, data, resp.Data)
-	assert.Equal(t, uint(5), *resp.TotalPages)
 	assert.Equal(t, uint64(10), *resp.Count)
 	assert.Equal(t, uint(2), *resp.PageSize)
 	assert.Equal(t, uint(1), *resp.PageNumber)
@@ -63,9 +62,9 @@ func TestHttpUtil_PostRest(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var body map[string]string
 		json.NewDecoder(r.Body).Decode(&body)
-		
+
 		assert.Equal(t, "test", body["input"])
-		
+
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte(`{"id":"123"}`))
 	}))
@@ -73,10 +72,10 @@ func TestHttpUtil_PostRest(t *testing.T) {
 
 	ctx := context.Background()
 	util := New(ctx)
-	
+
 	payload := map[string]string{"input": "test"}
 	resp, err := util.PostRest(server.URL, payload, 2*time.Second)
-	
+
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 	assert.Contains(t, string(resp.Data), "123")

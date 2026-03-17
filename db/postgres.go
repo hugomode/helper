@@ -104,8 +104,7 @@ func HealthheckPostgresHandler() error {
 
 // LikesQuery builds a GORM query with OR conditions using the LIKE operator for the specified slice of elements.
 // It supports string and int types, applying lower() to strings and casting ints to varchar.
-func LikesQuery[T *int | *string | *bool](slice []T, nameColumn string) *gorm.DB {
-	query := dbPostgres
+func LikesQuery[T *int | *string | *bool](query *gorm.DB, slice []T, nameColumn string) *gorm.DB {
 	for _, element := range slice {
 		switch any(element).(type) {
 		case *string:

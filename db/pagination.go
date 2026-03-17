@@ -10,7 +10,7 @@ import (
 )
 
 // GetDataQueryPagination applies standard GORM pagination (LIMIT and OFFSET) to a query.
-func GetDataQueryPagination(pageSize, pageNumber uint, dest interface{}, tx *gorm.DB) error {
+func GetDataQueryPagination(pageSize, pageNumber uint, dest any, tx *gorm.DB) error {
 	if pageSize == 0 {
 		return errors.New("pageSize must be greater than 0")
 	}
@@ -25,7 +25,7 @@ func GetDataQueryPagination(pageSize, pageNumber uint, dest interface{}, tx *gor
 }
 
 // RunOneQuery executes a GORM query and handles the record not found error.
-func RunOneQuery(dest interface{}, tx *gorm.DB) error {
+func RunOneQuery(dest any, tx *gorm.DB) error {
 	err := tx.Find(dest).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
