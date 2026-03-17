@@ -19,7 +19,8 @@ func GetDataQueryPagination(pageSize, pageNumber uint, dest any, tx *gorm.DB) er
 	}
 
 	offset := int((pageNumber - 1) * pageSize)
-	query := tx.Offset(offset).Limit(int(pageSize))
+	// Usamos Session para asegurar que no mutamos la instancia original si se usa en paralelo
+	query := tx.Session(&gorm.Session{}).Offset(offset).Limit(int(pageSize))
 
 	return RunOneQuery(dest, query)
 }

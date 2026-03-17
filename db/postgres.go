@@ -123,11 +123,11 @@ func LikesQuery[T *int | *string | *bool](query *gorm.DB, slice []T, nameColumn 
 // BetweenDates filters a query based on a date range (start and end times) for a given column.
 func BetweenDates(query *gorm.DB, desde, hasta *time.Time, nameColumn string) *gorm.DB {
 	if desde != nil && hasta != nil {
-		query.Where(fmt.Sprintf("%s BETWEEN ? AND ?", nameColumn), desde, hasta)
+		query = query.Where(fmt.Sprintf("%s BETWEEN ? AND ?", nameColumn), desde, hasta)
 	} else if hasta != nil {
-		query.Where(fmt.Sprintf("%s < ?", nameColumn), hasta)
+		query = query.Where(fmt.Sprintf("%s < ?", nameColumn), hasta)
 	} else if desde != nil {
-		query.Where(fmt.Sprintf("%s > ?", nameColumn), desde)
+		query = query.Where(fmt.Sprintf("%s > ?", nameColumn), desde)
 	}
 	return query
 }
