@@ -1,4 +1,4 @@
-module go.hugomode/helper
+module github.com/hugomode/helper
 
 go 1.26.1
 

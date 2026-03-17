@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	zap "go.hugomode/helper/logger"
+	zap "github.com/hugomode/helper/logger"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

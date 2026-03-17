@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"go.hugomode/helper/logger"
+	"github.com/hugomode/helper/logger"
 	"go.uber.org/zap"
 	"moul.io/http2curl"
 )

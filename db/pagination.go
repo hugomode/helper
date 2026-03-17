@@ -5,7 +5,7 @@ import (
 	"errors"
 	"sync"
 
-	"go.hugomode/helper/logger"
+	"github.com/hugomode/helper/logger"
 	"gorm.io/gorm"
 )
 
