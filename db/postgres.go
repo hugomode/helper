@@ -20,6 +20,20 @@ var (
 	dbOncePostgres sync.Once
 )
 
+type LikeMatchMode string
+type LikeQueryValue interface {
+	~string | ~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~bool
+}
+
+const (
+	LikeMatchExact      LikeMatchMode = "exact"
+	LikeMatchPrefix     LikeMatchMode = "prefix"
+	LikeMatchSuffix     LikeMatchMode = "suffix"
+	LikeMatchContains   LikeMatchMode = "contains"
+	LikeMatchPrefixOnly LikeMatchMode = LikeMatchPrefix
+	LikeMatchSuffixOnly LikeMatchMode = LikeMatchSuffix
+)
+
 // GetDBPostgres initializes and returns a singleton instance of the GORM Postgres database connection.
 // It configures connection pooling based on environment variables.
 func GetDBPostgres() (*gorm.DB, error) {
@@ -103,22 +117,80 @@ func HealthheckPostgresHandler() error {
 	return nil
 }
 
-// LikesQuery builds a GORM query with OR conditions using the LIKE operator for the specified slice of elements.
-// It supports string and int types, applying lower() to strings and casting ints to varchar.
-func LikesQuery[T *int | *string | *bool](query *gorm.DB, slice []T, nameColumn string) *gorm.DB {
+// LikesQuery adds a grouped LIKE filter to the query:
+// AND (cond1 OR cond2 ...)
+func LikesQuery[T LikeQueryValue](query *gorm.DB, slice []T, nameColumn string, matchMode LikeMatchMode) *gorm.DB {
+	conditions := make([]string, 0, len(slice))
+	args := make([]any, 0, len(slice))
+	columnExpr := buildLikeColumnExpr[T](nameColumn)
+
 	for _, element := range slice {
-		switch any(element).(type) {
-		case *string:
-			var str *string
-			str = any(element).(*string)
-			query = query.Or(fmt.Sprintf("lower(%s) LIKE ?", nameColumn), strings.ToLower(*str))
-		case *int:
-			var str *int
-			str = any(element).(*int)
-			query = query.Or(fmt.Sprintf("cast(%s as varchar) LIKE ?", nameColumn), strconv.Itoa(*str))
-		}
+		conditions = append(conditions, columnExpr)
+		args = append(args, buildLikePattern(normalizeLikeValue(element), matchMode))
 	}
-	return query
+
+	if len(conditions) == 0 {
+		return query
+	}
+
+	return query.Where("("+strings.Join(conditions, " OR ")+")", args...)
+}
+
+func buildLikePattern(value string, matchMode LikeMatchMode) string {
+	switch matchMode {
+	case LikeMatchPrefix:
+		return value + "%"
+	case LikeMatchSuffix:
+		return "%" + value
+	case LikeMatchContains:
+		return "%" + value + "%"
+	case LikeMatchExact:
+		fallthrough
+	default:
+		return value
+	}
+}
+
+func buildLikeColumnExpr[T LikeQueryValue](nameColumn string) string {
+	var zero T
+
+	switch any(zero).(type) {
+	case string:
+		return fmt.Sprintf("lower(%s) LIKE ?", nameColumn)
+	default:
+		return fmt.Sprintf("cast(%s as varchar) LIKE ?", nameColumn)
+	}
+}
+
+func normalizeLikeValue[T LikeQueryValue](value T) string {
+	switch v := any(value).(type) {
+	case string:
+		return strings.ToLower(v)
+	case int:
+		return strconv.Itoa(v)
+	case int8:
+		return strconv.FormatInt(int64(v), 10)
+	case int16:
+		return strconv.FormatInt(int64(v), 10)
+	case int32:
+		return strconv.FormatInt(int64(v), 10)
+	case int64:
+		return strconv.FormatInt(v, 10)
+	case uint:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint8:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint16:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint32:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint64:
+		return strconv.FormatUint(v, 10)
+	case bool:
+		return strconv.FormatBool(v)
+	default:
+		return strings.ToLower(fmt.Sprint(v))
+	}
 }
 
 // BetweenDates filters a query based on a date range (start and end times) for a given column.
