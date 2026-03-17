@@ -1,4 +1,4 @@
-package httpHelper
+package myhttp
 
 import (
 	"context"
