@@ -60,7 +60,8 @@ func GetDBPostgres() (*gorm.DB, error) {
 				NewDB: true,
 			})
 			dbPostgres.Config.NamingStrategy = schema.NamingStrategy{
-				TablePrefix: schemaname + ".",
+				TablePrefix:   fmt.Sprintf("%s.", schemaname),
+				SingularTable: true,
 			}
 		}
 		maxOpenConn := os.Getenv("DB_POSTGRES_MAX_OPEN_CONNECTIONS")
