@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	zap "github.com/hugomode/helper/logger"
-
+	"github.com/hugomode/helper/logger"
+	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
@@ -34,7 +34,7 @@ func GetDBPostgres() (*gorm.DB, error) {
 	dbOncePostgres.Do(func() {
 		// Configura la cadena de conexión de PostgreSQL
 		dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, pass, dbname)
-		newLogger := zap.NewZapGormLogger(zap.Log)
+		newLogger := logger.NewZapGormLogger(logger.Log)
 		// Abre la conexión a la base de datos
 		dbPostgres, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
 			NamingStrategy: schema.NamingStrategy{
@@ -50,6 +50,18 @@ func GetDBPostgres() (*gorm.DB, error) {
 		debe, err := dbPostgres.DB()
 		if err != nil {
 			panic("Error obtaining/configuring connection pool: " + err.Error())
+		}
+		if schemaname != "" {
+			logger.Log.Info("Using database schema", zap.String("schema", schemaname))
+			// We can't easily change the DB connection's naming strategy after it's created
+			// if GetDBPostgres doesn't allow it.
+			// Actually, we can session into it with new config.
+			dbPostgres = dbPostgres.Session(&gorm.Session{
+				NewDB: true,
+			})
+			dbPostgres.Config.NamingStrategy = schema.NamingStrategy{
+				TablePrefix: schemaname + ".",
+			}
 		}
 		maxOpenConn := os.Getenv("DB_POSTGRES_MAX_OPEN_CONNECTIONS")
 		maxIdleConn := os.Getenv("DB_POSTGRES_MAX_IDLE_CONNECTIONS")
