@@ -1,153 +1,310 @@
-# Helper Utility
+# helper
 
-Este proyecto es una colección de utilitarios en Go para simplificar tareas comunes como el manejo de logs con Zap, la conexión y consultas a bases de datos Postgres mediante GORM, y la realización de peticiones HTTP con reintentos y logging integrado.
+`helper` es un módulo Go con utilidades reutilizables para tres áreas comunes:
 
-## Tabla de Contenidos
-- [Instalación](#instalación)
-- [Logger](#logger)
-- [Base de Datos (Postgres)](#base-de-datos-postgres)
-- [Paginación y Consultas Paralelas](#paginación-y-consultas-paralelas)
-- [HTTP Util](#http-util)
-- [Pruebas (Testing)](#pruebas-testing)
-
----
+- logging con `zap`
+- acceso a PostgreSQL con `gorm`
+- consumo HTTP con reintentos y respuesta paginada
 
 ## Instalación
 
-Para importar este utilitario en tu proyecto Go:
-
 ```bash
-go get -u github.com/hugomode/helper
+go get github.com/hugomode/helper
 ```
 
----
+## Paquetes disponibles
+
+- `github.com/hugomode/helper/logger`
+- `github.com/hugomode/helper/db`
+- `github.com/hugomode/helper/myHttp`
 
 ## Logger
 
-El paquete `logger` proporciona una configuración base para `uber-go/zap` con soporte para diferentes entornos y niveles de log.
+El paquete `logger` expone un logger global y una fábrica para crear loggers con nivel específico.
 
-### Configuración
-Puede configurarse mediante las siguientes variables de entorno:
-- `APP_ENV`: Si es `development`, los logs se muestran con formato amigable y colores (console encoding). Por defecto usa configuración de producción (JSON).
+### Variables de entorno
 
-### Ejemplo de Uso
+- `APP_ENV=development`: usa salida tipo consola, más legible para desarrollo.
+- cualquier otro valor: mantiene la configuración base de producción.
+
+### Uso básico
+
 ```go
-import "go.hugomode/helper/logger"
+package main
 
-func main() {
-    // Inicializar el logger global
-    logger.InitLogger()
-    
-    // Usar el logger global
-    logger.Log.Info("Iniciando aplicación...")
-    
-    // Crear un logger con un nivel específico
-    customLog := logger.NewLoggerWithLevel("debug")
-    customLog.Debug("Este es un mensaje de debug")
-}
-```
-
----
-
-## Base de Datos (Postgres)
-
-El paquete `db` facilita la conexión a PostgreSQL utilizando GORM, manejando automáticamente el pool de conexiones y el esquema.
-
-### Variables de Entorno Requeridas
-- `DB_POSTGRES_HOST`, `DB_POSTGRES_PORT`, `DB_POSTGRES_USER`, `DB_POSTGRES_PASS`, `DB_POSTGRES_NAME`, `DB_POSTGRES_SCHEMA`
-
----
-
-## Paginación y Consultas Paralelas
-
-El paquete `db` incluye funciones para simplificar la paginación y la ejecución de consultas concurrentes (útil para obtener datos y conteo total).
-
-### Ejemplo de Paginación y Consultas Paralelas
-```go
 import (
-    "context"
-    "go.hugomode/helper/db"
-    "go.hugomode/helper/http"
-)
-
-func ObtenerUsuariosPaginados(pageSize, pageNumber uint) (*http.JSONData, error) {
-    var usuarios []Usuario
-    var total int64
-    ctx := context.Background()
-    
-    tx, _ := db.GetDBPostgres()
-
-    err := db.RunQueriesInParallel(ctx,
-        func() error {
-            // Consulta de datos con paginación
-            return db.GetDataQueryPagination(pageSize, pageNumber, &usuarios, tx)
-        },
-        func() error {
-            // Consulta de conteo total
-            return tx.Model(&Usuario{}).Count(&total).Error
-        },
-    )
-
-    if err != nil {
-        return nil, err
-    }
-
-    // Generar respuesta estandarizada
-    return http.ResponseWithPagination(usuarios, total, pageSize, pageNumber), nil
-}
-```
-
----
-
-## HTTP Util
-
-El paquete `http` proporciona un cliente robusto con soporte para retries, logging y manejo de respuestas JSON.
-
-### Ejemplo de Uso
-```go
-import (
-    "context"
-    "time"
-    "go.hugomode/helper/http"
+	"github.com/hugomode/helper/logger"
 )
 
 func main() {
-    ctx := context.Background()
-    client := http.New(ctx)
+	logger.InitLogger()
 
-    client.SetCallRetry(3)
-    client.SetPrintCurl(true)
+	logger.Log.Info("aplicacion iniciada")
 
-    resp, err := client.GetRest("https://api.ejemplo.com/data", 5*time.Second)
-    if err == nil {
-        fmt.Printf("Status: %d, Body: %s\n", resp.StatusCode, string(resp.Data))
-    }
+	debugLog := logger.NewLoggerWithLevel("debug")
+	debugLog.Debug("mensaje de debug")
 }
 ```
 
-#### Estructura de Respuesta Estándar
+### Integración con GORM
+
+Si inicializas la base de datos con `db.GetDBPostgres()`, el módulo ya conecta GORM con `zap` usando `logger.NewZapGormLogger(...)`.
+
+## Base de datos
+
+El paquete `db` crea una conexión singleton a PostgreSQL y trae helpers para filtros y paginación.
+
+### Variables de entorno
+
+Requeridas:
+
+- `DB_POSTGRES_HOST`
+- `DB_POSTGRES_PORT`
+- `DB_POSTGRES_USER`
+- `DB_POSTGRES_PASS`
+- `DB_POSTGRES_NAME`
+- `DB_POSTGRES_SCHEMA`
+
+Opcionales para pool de conexiones:
+
+- `DB_POSTGRES_MAX_OPEN_CONNECTIONS`
+- `DB_POSTGRES_MAX_IDLE_CONNECTIONS`
+- `DB_POSTGRES_MAX_OPEN_CONNECTIONS_TIMEOUT`
+- `DB_POSTGRES_MAX_IDLE_CONNECTIONS_TIMEOUT`
+
+### Crear la conexión
+
+```go
+package main
+
+import (
+	"github.com/hugomode/helper/db"
+	"github.com/hugomode/helper/logger"
+)
+
+func main() {
+	logger.InitLogger()
+
+	conn, err := db.GetDBPostgres()
+	if err != nil {
+		panic(err)
+	}
+
+	if err := db.HealthheckPostgresHandler(); err != nil {
+		panic(err)
+	}
+
+	_ = conn
+}
+```
+
+### Paginación
+
+`GetDataQueryPagination` aplica `OFFSET` y `LIMIT` sobre un `*gorm.DB`.
+
+```go
+var users []User
+
+conn, err := db.GetDBPostgres()
+if err != nil {
+	return err
+}
+
+query := conn.Model(&User{}).Order("id desc")
+
+if err := db.GetDataQueryPagination(20, 1, &users, query); err != nil {
+	return err
+}
+```
+
+Reglas relevantes:
+
+- `pageSize` debe ser mayor a `0`
+- si `pageNumber` es `0`, internamente se usa `1`
+
+### Consultas en paralelo
+
+`RunQueriesInParallel` sirve para ejecutar en paralelo la consulta de datos y la consulta de conteo.
+
+```go
+package service
+
+import (
+	"context"
+
+	"github.com/hugomode/helper/db"
+	"github.com/hugomode/helper/myHttp"
+	"gorm.io/gorm"
+)
+
+func GetUsersPage(ctx context.Context, tx *gorm.DB, pageSize, pageNumber uint) (*myHttp.JSONData, error) {
+	var users []User
+	var total int64
+
+	baseQuery := tx.Model(&User{})
+
+	err := db.RunQueriesInParallel(
+		ctx,
+		func() error {
+			return db.GetDataQueryPagination(pageSize, pageNumber, &users, baseQuery.Order("id desc"))
+		},
+		func() error {
+			return baseQuery.Count(&total).Error
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return myHttp.ResponseWithPagination(users, total, pageSize, pageNumber), nil
+}
+```
+
+### Filtros auxiliares
+
+#### `LikesQuery`
+
+Construye una condición agrupada:
+
+```sql
+AND (cond1 OR cond2 OR ...)
+```
+
+Ejemplo:
+
+```go
+names := []string{"hugo", "mode"}
+
+query := db.LikesQuery(
+	conn.Model(&User{}),
+	names,
+	"name",
+	db.LikeMatchContains,
+)
+```
+
+Modos soportados:
+
+- `db.LikeMatchExact`
+- `db.LikeMatchPrefix`
+- `db.LikeMatchSuffix`
+- `db.LikeMatchContains`
+
+Para `string` usa `lower(columna) LIKE ?`. Para tipos numéricos y `bool`, hace `cast(... as varchar) LIKE ?`.
+
+#### `BetweenDates`
+
+Aplica filtros por rango sobre una columna de fecha:
+
+```go
+query := db.BetweenDates(
+	conn.Model(&Order{}),
+	startDate,
+	endDate,
+	"created_at",
+)
+```
+
+Comportamiento:
+
+- si `desde` y `hasta` existen, usa `BETWEEN`
+- si solo existe `hasta`, usa `<`
+- si solo existe `desde`, usa `>`
+
+## HTTP
+
+El paquete `myHttp` envuelve `net/http` y agrega:
+
+- headers por defecto en JSON
+- logging
+- reintentos
+- impresión opcional del request como `curl`
+- auth básica
+
+### Crear un cliente
+
+```go
+package main
+
+import (
+	"context"
+	"time"
+
+	"github.com/hugomode/helper/myHttp"
+)
+
+func main() {
+	client := myHttp.New(context.Background())
+	client.SetCallRetry(3)
+	client.SetPrintCurl(true)
+	client.SetLevel("debug")
+
+	resp, err := client.GetRest("https://api.example.com/users", 5*time.Second)
+	if err != nil {
+		panic(err)
+	}
+
+	_ = resp
+}
+```
+
+### Métodos disponibles
+
+- `GetRest(url, timeout)`
+- `PostRest(url, body, timeout)`
+- `PutRest(url, body, timeout)`
+- `PatchRest(url, body, timeout)`
+
+### Configuración adicional
+
+```go
+import "net/http"
+
+client := myHttp.New(ctx)
+
+client.SetHeader(http.Header{
+	"Authorization": []string{"Bearer <token>"},
+})
+
+client.AddHeader(http.Header{
+	"X-Trace-ID": []string{"abc-123"},
+})
+
+client.SetBasicAuthenticacion("user", "pass")
+client.SetCallRetry(2)
+client.SetPrintCurl(false)
+```
+
+### Respuesta estándar paginada
+
+`myHttp.ResponseWithPagination(...)` devuelve:
+
 ```go
 type JSONData struct {
-    Data       any       `json:"data"`
-    TotalPages *uint     `json:"total_pages,omitempty"`
-    PageNumber *uint     `json:"page_number,omitempty"`
-    PageSize   *uint     `json:"page_size,omitempty"`
-    Count      *uint64   `json:"count,omitempty"`
-    Errors     []*string `json:"errors,omitempty"`
+	Data       any       `json:"data"`
+	TotalPages *uint     `json:"total_pages,omitempty"`
+	PageNumber *uint     `json:"page_number,omitempty"`
+	PageSize   *uint     `json:"page_size,omitempty"`
+	Count      *int64    `json:"count,omitempty"`
+	Errors     []*string `json:"errors,omitempty"`
 }
 ```
 
----
+## Tests
 
-## Pruebas (Testing)
-
-El proyecto incluye tests unitarios para los paquetes `logger`, `db` y `http`. Para ejecutar las pruebas, asegúrate de haber instalado las dependencias (especialmente `testify`) y corre el siguiente comando desde la raíz del proyecto:
+Para ejecutar la suite:
 
 ```bash
-go test -v ./...
+go test ./...
 ```
 
-Estas pruebas verifican:
-- Inicialización y niveles del logger.
-- Lógica de paginación y ejecución paralela segura.
-- Configuración de cabeceras y peticiones HTTP (usando `httptest`).
+Actualmente hay cobertura sobre:
+
+- inicialización del logger
+- validación de paginación y ejecución paralela
+- cliente HTTP con `httptest`
+
+## Notas
+
+- la conexión PostgreSQL se inicializa una sola vez por proceso usando `sync.Once`
+- `logger.InitLogger()` debe ejecutarse antes de usar `logger.Log` o antes de abrir la conexión de base de datos
