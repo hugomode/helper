@@ -1,4 +1,4 @@
-package myhttp
+package myHttp
 
 import (
 	"bytes"
