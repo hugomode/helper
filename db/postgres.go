@@ -33,7 +33,7 @@ func GetDBPostgres() (*gorm.DB, error) {
 	// Utiliza la función sync.Once para garantizar que la conexión se establezca solo una vez.
 	dbOncePostgres.Do(func() {
 		// Configura la cadena de conexión de PostgreSQL
-		dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, pass, dbname)
+		dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable search_path=%s", host, port, user, pass, dbname, schemaname)
 		newLogger := logger.NewZapGormLogger(logger.Log)
 		// Abre la conexión a la base de datos
 		dbPostgres, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
